@@ -1,20 +1,15 @@
 import uvicorn
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 from PIL import Image
-from typing import List
-import json
+import traceback
 from utils.gpt_image_analyze import analyze_image
 from utils.clova_stt import stt_function
 from utils.clova_tts import generate_tts
-import tempfile
-from threading import Thread
 from utils.chatgpt_class import ChatGPTClass
-# from utils.utils import play_sound
-import traceback
 
 app = FastAPI()
 
@@ -37,37 +32,25 @@ app.add_middleware(
 def check_folder():
     if os.path.exists("data"):
         folders = os.listdir("data")
-        if len(folders) > 0:
+        if folders:
             folders.sort()
-            last_folder = folders[-1]
-            last_folder_number = int(last_folder.split("_")[-1])
-            FOLDER = f"data_{last_folder_number+1:02d}"
-        else:
-            FOLDER = "data_00"
-    return FOLDER
+            last_folder_number = int(folders[-1].split("_")[-1])
+            return f"data_{last_folder_number+1:02d}"
+        return "data_00"
+    return None
 
-# test
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
 
-# image test
 @app.post("/test_image")
-async def test_image(file: UploadFile = File):
-    # return image info
+async def test_image(file: UploadFile = File(...)):
     try:
-        print(file)
-        # Get the file name
-        file_name = file.filename
-        # Open the image using PIL
         image = Image.open(file.file)
-        # Get the image size
-        width, height = image.size
-        # Prepare the response
         image_info = {
-            "file_name": file_name,
-            "width": width,
-            "height": height,
+            "file_name": file.filename,
+            "width": image.size[0],
+            "height": image.size[1],
             "format": image.format,
             "mode": image.mode
         }
@@ -76,8 +59,6 @@ async def test_image(file: UploadFile = File):
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
 
-
-# audio test
 @app.get("/get_audio")
 async def get_audio():
     try:
@@ -86,32 +67,25 @@ async def get_audio():
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
 
-
-# audio test
 @app.post("/test_audio")
-async def test_audio(file: UploadFile = File):
+async def test_audio(file: UploadFile = File(...)):
     try:
-        file_name = file.filename
         audio_info = {
-            "file_name": file_name,
-            "format": file.format,
-            "mode": file.mode
+            "file_name": file.filename,
+            "format": file.content_type,
         }
         return audio_info
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
 
-# 이미지 파일을 업로드 받아서 이미지를 분석하고, 분석 결과를 mp3 파일로 저장하고, return은 분석 결과와 mp3 파일 경로를 반환합니다.
 @app.post("/analyze_image_and_return_response_and_audio")
-async def analyze_image_and_return_response_and_audio(file: UploadFile = File):
+async def analyze_image_and_return_response_and_audio(file: UploadFile = File(...)):
     global GPT_CLASS, FOLDER
     try:
-        print("analyze_image 진행중...")
         FOLDER = check_folder()
         GPT_CLASS = ChatGPTClass(folder=FOLDER)
-        if not os.path.exists(os.path.join("data", FOLDER)):
-            os.makedirs(os.path.join("data", FOLDER))
+        os.makedirs(os.path.join("data", FOLDER), exist_ok=True)
         image = Image.open(file.file)
         image.save(os.path.join("data", FOLDER, file.filename))
         GPT_CLASS.filename = file.filename.split(".")[0]
@@ -122,88 +96,58 @@ async def analyze_image_and_return_response_and_audio(file: UploadFile = File):
         GPT_CLASS.add_message("user", "아이가 좋아할 제목으로 사용할 만큼 짧게 작성해줘. 예를 들어서 사진에 사자가 들어가 있다면: '무시무시한 사자!'", update_log=False)
         response_data_summary = GPT_CLASS.get_response(update_log=False)
         GPT_CLASS.remove_index_message(2)
-        GPT_CLASS.response_data_history = response_data
         return {"status": "success", "response_data": response_data, "response_data_summary": response_data_summary}
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
 
-
-@app.get("/analyze_image_and_return_response_and_audio_2")
-async def analyze_image_and_return_response_and_audio_2():
+@app.get("/get_audio_data")
+async def get_audio_data():
     try:
         response_data = GPT_CLASS.response_data_history
-        # GPT_CLASS.remove_index_message()
-        output_mp3_path = generate_tts(response_data, file_name=os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_voice_01.mp3"))
+        output_mp3_path = generate_tts(response_data, file_name=os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_voice_{GPT_CLASS.question_index:02d}.mp3"))
         return FileResponse(output_mp3_path, media_type="audio/mpeg")
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
 
+# def get_response(question: str):
+#     try:
+#         GPT_CLASS.add_message("user", question)
+#         response_data = GPT_CLASS.get_response()
+#         output_mp3_path = generate_tts(response_data, file_name=os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_voice_{GPT_CLASS.question_index:02d}.mp3"))
+#         return {"status": "success", "response_data": response_data, "output_mp3_path": output_mp3_path}
+#     except Exception as e:
+#         print(traceback.format_exc())
+#         raise HTTPException(status_code=500, detail=f"Error processing question: {str(e)}")
 
-# 아이가 추가로 질문한 내용을 받아서 답변을 생성하는 API. string 형태로 질문을 받아서 mp3 파일로 저장을 하고, string 형태로 답변을 반환합니다.
-def get_response(question: str):
-    try:
-        GPT_CLASS.add_message("user", question)
-        response_data = GPT_CLASS.get_response()
-        output_mp3_path = generate_tts(response_data, file_name=os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_voice_{GPT_CLASS.question_index:02d}.mp3"))
-        # GPT_CLASS.question_index += 1
-
-        # T = Thread(target=play_sound, args=(output_mp3_path,))
-        # T.start()
-        return {"status": "success", "response_data": response_data, "output_mp3_path": output_mp3_path}
-    except Exception as e:
-        print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error processing question: {str(e)}")
-
-# 유저의 목소리가 담긴 mp3 파일을 업로드 받아서 텍스트로 변환하는 API
 @app.post("/analyze_voice_and_return_response_and_audio")
-async def analyze_voice_and_return_response_and_audio(file: UploadFile = File):
+async def analyze_voice_and_return_response_and_audio(file: UploadFile = File(...)):
     try:
-        # 우선 file을 다운 받아서 저장
         audio_file_path = os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_voice_{GPT_CLASS.question_index+1:02d}.mp3")
         with open(audio_file_path, "wb") as f:
             f.write(file.file.read())
-
-        # STT 함수를 호출하여 텍스트로 변환합니다.
         audio_text = stt_function(audio_file_path)['text']
-        print("음성인식 결과:", audio_text)
-        # 텍스트를 가지고 응답을 반환합니다.
-        response_data = get_response(question=audio_text)
-        return response_data
-
+        GPT_CLASS.add_message("user", audio_text)
+        response_data = GPT_CLASS.get_response()
+        # output_mp3_path = generate_tts(response_data, file_name=os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_voice_{GPT_CLASS.question_index:02d}.mp3"))
+        return {"status": "success", "response_data": response_data}
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
 
-# 뒤로 가기 버튼을 눌렀을 때 초기화하는 API
 @app.get("/init_messages")
 async def init_messages():
     try:
-        # 지금까지 진행된 대화를 정리합니다.
-        GPT_CLASS.add_message("user", "지금까지 한 대화를 한 문장으로 요약해서 알려줘. 질문은 안해도 돼. 아이와 대화하는 듯한 문장으로 만들어줘", update_log=False)
+        GPT_CLASS.add_message("user", "지금까지 한 대화를 한 문장으로 요약해서 알려줘. 질문은 안해도 돼. 아이와 대화하는 듯한 문장으로 만들어줘, 예를 들어서 사자 내용이 들어가 있다면: '무시무시한 사자가 나타났다!'", update_log=False)
         response_data = GPT_CLASS.get_response(update_log=False)
         response_data_dict = {"role": "summary", "content": response_data}
         GPT_CLASS.update_log(message=response_data_dict)
-        # GPT_CLASS.init_messages()
         return {"status": "success"}
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error removing last message: {str(e)}")
 
-
-# # 텍스트를 음성으로 변환하는 API
-# @app.post("/get_audio_from_text")
-# async def get_audio_from_text(text: str = Form(...)):
-#     try:
-#         # 텍스트를 음성으로 변환합니다.
-#         generate_tts(text, file_name='output.mp3')
-#         # 변환된 음성 파일을 반환합니다.
-#         return {"status": "success"}
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Error processing text: {str(e)}")
-
-# 현재 GPT_CLASS 정보 반환
 @app.get("/get_gpt_class_info")
 async def get_gpt_class_info():
     try:
@@ -212,11 +156,5 @@ async def get_gpt_class_info():
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error getting gpt class info: {str(e)}")
 
-
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", reload=True)
-    # 실행코드
-    # conda activate santa
-    # uvicorn main:app --port 8080
-    # ngrok http 8080
-    # lt -p 8080 -s test

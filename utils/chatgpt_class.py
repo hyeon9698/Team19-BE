@@ -86,7 +86,8 @@ class ChatGPTClass:
         if response.status_code == 200:
             response_data = response.json()['choices'][0]['message']['content']
             self.add_message("assistant", response_data, update_log)
-            self.response_data_history = response_data
+            if update_log:
+                self.response_data_history = response_data
             return response_data
         else:
             return "Error: " + response.text
