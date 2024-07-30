@@ -56,15 +56,16 @@ class ChatGPTClass:
             ]
         })
 
-    def add_message(self, role, content):
+    def add_message(self, role, content, update_log=True):
         self.data.append({
             "role": role,
             "content": content
         })
-        self.update_log({"role": role, "content": content})
+        if update_log:
+            self.update_log({"role": role, "content": content})
 
-    def remove_image_message(self):
-        self.data.pop(1)
+    def remove_index_message(self, index):
+        self.data.pop(index)
 
     def init_messages(self):
         self.data = []
@@ -76,7 +77,7 @@ class ChatGPTClass:
         with open(os.path.join("data", self.folder, "log.txt"), "a+", encoding="utf-8") as f:
             f.write(f"{self.question_index:02d}_{message['role']}: {message['content']}\n")
 
-    def get_response(self):
+    def get_response(self, update_log=True):
         payload = {
             "model": "gpt-4o-mini",
             "messages": self.data
@@ -84,7 +85,7 @@ class ChatGPTClass:
         response = requests.post(self.url, headers=self.headers, json=payload)
         if response.status_code == 200:
             response_data = response.json()['choices'][0]['message']['content']
-            self.add_message("assistant", response_data)
+            self.add_message("assistant", response_data, update_log)
             self.response_data_history = response_data
             return response_data
         else:
@@ -94,7 +95,7 @@ if __name__ == '__main__':
     chatgpt = ChatGPTClass()
     chatgpt.add_message_with_image("./example_data/test.jpg")
     print(chatgpt.get_response())
-    chatgpt.remove_image_message()
+    chatgpt.remove_index_message()
     breakpoint()
     chatgpt.add_message("user", "네 좋아해요 더 추천해주세요")
     chatgpt.add_message("user", "저는 치킨 좋아해요")
