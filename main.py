@@ -241,7 +241,7 @@ async def finish_messages():
         GPT_CLASS.update_log(message=response_data_dict_4)
         response_data_dict_5 = {"role": "date", "content": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         GPT_CLASS.update_log(message=response_data_dict_5)
-        telegram_send_message(f"😀모야Q에서 오늘의 질문 도착!\nQ. {response_data_question_2}")
+        telegram_send_message(f"😀모야Q에서 아이와 함께 나눌 오늘의 질문 도착!\nQ. {response_data_question_2}")
         try:
             data = await get_all_data()
             data = json.loads(data.body.decode())
@@ -271,7 +271,14 @@ async def my_data():
         # breakpoint()
         # Get the top 4 most common big tags
         top_tag = tag_counts.most_common(10)
-        return_big_tag, count = zip(*top_tag)
+        # top_tag != []
+        # breakpoint()
+        
+        return_big_tag = []
+        count = []
+        if top_tag != []:
+            
+            return_big_tag, count = zip(*top_tag)
         # all_small_tags = [tag for entry in data.values() for tag in entry["small_tag"]]
         all_small_tags = []
         for entry in data.values():
@@ -280,14 +287,15 @@ async def my_data():
                     all_small_tags.append(tag)
         # get one data.keys() that has the most common big tag
         recommend_question = "질문이 없어요!"
-        for key, value in data.items():
-            # breakpoint()
-            if "big_tag" in value:
-                if return_big_tag[0] in value["big_tag"]:
-                    recommend_question = value["recommend_questions_1"]
+        if top_tag != []:
+            for key, value in data.items():
+                # breakpoint()
+                if "big_tag" in value:
+                    if return_big_tag[0] in value["big_tag"]:
+                        recommend_question = value["recommend_questions_1"]
         if len(all_small_tags) > 8:
             all_small_tags = all_small_tags[:8]
-        return {"status": "success", "plot_data_path": "/data/plot.png", "tag": return_big_tag, "count": count, "all_small_tags": all_small_tags, "recommend_question": recommend_question}
+        return {"status": "success", "plot_data_path": "/data/plot.png", "tag": return_big_tag , "count": count, "all_small_tags": all_small_tags, "recommend_question": recommend_question}
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error getting my data: {str(e)}")

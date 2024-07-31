@@ -77,7 +77,7 @@ def get_directory_structure(rootdir):
     dir_structure = {}
 
     def process_directory(directory, structure):
-        for entry in os.listdir(directory):
+        for entry in sorted(os.listdir(directory), reverse=True):
             entry_path = os.path.join(directory, entry)
             if os.path.isdir(entry_path):
                 structure[entry] = {}
