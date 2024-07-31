@@ -118,7 +118,7 @@ async def analyze_image_and_return_response_and_audio(file: UploadFile = File(..
 @app.get("/get_audio_data")
 async def get_audio_data():
     try:
-        print(GPT_CLASS.question_index+1)
+        # print(GPT_CLASS.question_index+1)
         response_data = GPT_CLASS.response_data_history
         if GPT_CLASS.kids_age == "2":
             output_mp3_path = generate_tts(response_data, file_name=os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_voice_{GPT_CLASS.question_index:02d}.mp3"))
@@ -135,7 +135,7 @@ async def get_audio_data():
 async def get_generated_image_data():
     try:
         print("GPT_CLASS.question_index", GPT_CLASS.question_index)
-        if GPT_CLASS.question_index == 4:
+        if GPT_CLASS.question_index == 5:
             print("이미지 생성중 ...")
             # generated_image = generate_image(str(GPT_CLASS.data))
             # generated_image_path = os.path.join("data", FOLDER, f"generated_image.jpg")
@@ -145,7 +145,7 @@ async def get_generated_image_data():
             return JSONResponse({"status": "success", "generated_image_path": "/data/data_06/generated_image.jpg"})
         else:
             print("이미지 생성 안함")
-            return JSONResponse({"status": "success", "generated_image_path": None})
+            return JSONResponse({"status": "success", "generated_image_path": "nono"})
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
