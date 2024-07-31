@@ -137,12 +137,12 @@ async def get_generated_image_data():
         print("GPT_CLASS.question_index", GPT_CLASS.question_index)
         if GPT_CLASS.question_index == 5:
             print("이미지 생성중 ...")
-            # generated_image = generate_image(str(GPT_CLASS.data))
-            # generated_image_path = os.path.join("data", FOLDER, f"generated_image.jpg")
-            # generated_image.save(generated_image_path)
+            generated_image = generate_image(str(GPT_CLASS.data))
+            generated_image_path = os.path.join("data", FOLDER, f"generated_image.jpg")
+            generated_image.save(generated_image_path)
             # return FileResponse(generated_image_path, media_type="image/jpeg")
             # return {"status": "success", "generated_image_path": generated_image_path}
-            return JSONResponse({"status": "success", "generated_image_path": "/data/data_06/generated_image.jpg"})
+            return JSONResponse({"status": "success", "generated_image_path": '/'+generated_image_path.replace("\\", "/")})
         else:
             print("이미지 생성 안함")
             return JSONResponse({"status": "success", "generated_image_path": "nono"})
