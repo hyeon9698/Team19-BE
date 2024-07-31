@@ -10,7 +10,7 @@ import traceback
 from utils.clova_stt import stt_function
 from utils.clova_tts import generate_tts
 from utils.chatgpt_class import ChatGPTClass
-from utils.utils import check_folder, get_directory_structure, telegram_send_message, plot_big_tag, telegram_send_image
+from utils.utils import check_folder, get_directory_structure, telegram_send_message, plot_big_tag, telegram_send_image, summary_function
 import shutil
 from utils.gpt_image_generateion import generate_image
 from fastapi.staticfiles import StaticFiles
@@ -186,7 +186,8 @@ async def analyze_voice_and_return_response_and_audio(file: UploadFile = File(..
             GPT_CLASS.add_message("user", audio_text)
         response_data = GPT_CLASS.get_response()
         print("AI 대답:", response_data)
-        return {"status": "success", "user_input_data": audio_text, "response_data": response_data, "question_index": GPT_CLASS.question_index}
+        print(GPT_CLASS.question_index)
+        return {"status": "success", "user_input_data": audio_text, "response_data": response_data, "generate_image_TF": True if GPT_CLASS.question_index == 5 else False}
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
@@ -206,6 +207,7 @@ async def voice_test_test(file: UploadFile = File(...)):
 @app.get("/finish_messages")
 async def finish_messages():
     try:
+        # summary_function(text) # 퀄리티 좋지 않음.
         GPT_CLASS.add_message("user", "지금까지 한 대화를 짧게 알려줘. 질문은 안해도 돼. ~가 뭐야? 형식으로 작성해줘. 예를 들어서 사자 내용이 들어가 있다면: 사자가 뭐야?, 자전거가 들어가 있다면: 자전거가 뭐야?", update_log=False)
         response_data = GPT_CLASS.get_response(update_log=False)
         response_data_dict = {"role": "short_summary", "content": response_data}
