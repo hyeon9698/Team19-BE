@@ -270,7 +270,7 @@ async def my_data():
         tag_counts = Counter(all_big_tags)
         # breakpoint()
         # Get the top 4 most common big tags
-        top_tag = tag_counts.most_common(4)
+        top_tag = tag_counts.most_common(10)
         return_big_tag, count = zip(*top_tag)
         # all_small_tags = [tag for entry in data.values() for tag in entry["small_tag"]]
         all_small_tags = []
