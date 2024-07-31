@@ -1,5 +1,10 @@
 from playsound import playsound
 import os
+import telegram # pip install python-telegram-bot==13.13
+import matplotlib.pyplot as plt
+from collections import Counter
+plt.rcParams['font.family'] ='Malgun Gothic'
+plt.rcParams['axes.unicode_minus'] = False
 
 def play_sound(audio_file_path):
     playsound(audio_file_path)
@@ -83,3 +88,54 @@ def get_directory_structure(rootdir):
     process_directory(rootdir, dir_structure)
 
     return dir_structure
+
+def telegram_send_message(text):
+    try:
+        telegram_token = os.getenv("telegram_api")
+        telegram_chat_id = os.getenv("telegram_chat_id")
+        bot = telegram.Bot(token=telegram_token)
+        bot.sendMessage(chat_id=telegram_chat_id, text=text)
+    except:
+        pass
+    return
+
+def telegram_send_image(image_path):
+    try:
+        telegram_token = os.getenv("telegram_api")
+        telegram_chat_id = os.getenv("telegram_chat_id")
+        bot = telegram.Bot(token=telegram_token)
+        bot.send_photo(chat_id=telegram_chat_id, photo=open(image_path, 'rb'))
+    except:
+        pass
+
+def plot_top_big_tags_kids_theme(data):
+    try:
+        # Extract all big tags from the data
+        all_big_tags = [tag for entry in data.values() for tag in entry["big_tag"]]
+        
+        # Count the occurrences of each big tag
+        tag_counts = Counter(all_big_tags)
+        
+        # Get the top 4 most common big tags
+        top_tags = tag_counts.most_common(4)
+        
+        # Separate the tags and their counts for plotting
+        tags, counts = zip(*top_tags)
+        
+        # Create the bar plot with a kids' theme
+        plt.figure(figsize=(12, 8))
+        bars = plt.bar(tags, counts, color=['#FFB6C1', '#FFD700', '#87CEEB', '#98FB98'], edgecolor='black')
+        plt.xlabel('우리 아이의 관심 태그', fontsize=20)
+        plt.ylabel('개수', fontsize=20)
+        plt.title('상위 4개 태그', fontsize=24, fontweight='bold')
+        
+        # Add some decoration
+        for bar in bars:
+            yval = bar.get_height()
+            plt.text(bar.get_x() + bar.get_width()/2, yval + 0.1, int(yval), ha='center', va='bottom', fontsize=20)
+        
+        plt.grid(axis='y', linestyle='--', alpha=0.7)
+        plt.savefig('./plot.png')
+        # plt.show()
+    except:
+        pass

@@ -10,11 +10,13 @@ import traceback
 from utils.clova_stt import stt_function
 from utils.clova_tts import generate_tts
 from utils.chatgpt_class import ChatGPTClass
-from utils.utils import check_folder, get_directory_structure
+from utils.utils import check_folder, get_directory_structure, telegram_send_message, plot_top_big_tags_kids_theme, telegram_send_image
 import shutil
 from utils.gpt_image_generateion import generate_image
 from fastapi.staticfiles import StaticFiles
 import datetime
+import json
+
 
 app = FastAPI()
 
@@ -82,9 +84,10 @@ async def test_audio(file: UploadFile = File(...)):
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
 
-@app.get("/init_model/{kidgs_age}")
-async def init_model(kids_age="0"):
+@app.get("/init_model/{kids_age}")
+async def init_model(kids_age: str):
     global GPT_CLASS, FOLDER
+    print("kids_age", kids_age)
     FOLDER = check_folder()
     GPT_CLASS = ChatGPTClass(folder=FOLDER, kids_age=kids_age)
 
@@ -208,8 +211,8 @@ async def finish_messages():
         response_data = GPT_CLASS.get_response(update_log=False)
         response_data_dict_1 = {"role": "recommend_questions_1", "content": response_data}
         GPT_CLASS.add_message("user", "지금까지 AI와 아이가 주고 받은 대화를 바탕으로, 부모가 아이에게 할 수 있는 질문 1가지를 알려줘. 질문은 행동에 관한 질문이면 좋겠어. (음식 이야기를 했다면: 같이 음식을 만들어 볼까요?)", update_log=False)
-        response_data = GPT_CLASS.get_response(update_log=False)
-        response_data_dict_2 = {"role": "recommend_questions_2", "content": response_data}
+        response_data_question_2 = GPT_CLASS.get_response(update_log=False)
+        response_data_dict_2 = {"role": "recommend_questions_2", "content": response_data_question_2}
         GPT_CLASS.update_log(message=response_data_dict_1)
         GPT_CLASS.update_log(message=response_data_dict_2)
 
@@ -231,6 +234,14 @@ async def finish_messages():
         GPT_CLASS.update_log(message=response_data_dict_4)
         response_data_dict_5 = {"role": "date", "content": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         GPT_CLASS.update_log(message=response_data_dict_5)
+        telegram_send_message(f"모야Q에서 오늘의 질문이 도착!\nQ. {response_data_question_2}")
+        try:
+            data = await get_all_data()
+            data = json.loads(data.body.decode())
+            plot_top_big_tags_kids_theme(data)
+            telegram_send_image("./plot.png")
+        except:
+            pass
         return {"status": "success"}
     except Exception as e:
         print(traceback.format_exc())
