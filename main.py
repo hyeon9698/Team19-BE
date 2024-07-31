@@ -135,7 +135,8 @@ async def get_audio_data():
 async def get_generated_image_data():
     try:
         print("GPT_CLASS.question_index", GPT_CLASS.question_index)
-        if GPT_CLASS.question_index == 5:
+        # if GPT_CLASS.question_index == 5:
+        if GPT_CLASS.question_index == 11:
             print("이미지 생성중 ...")
             generated_image = generate_image(str(GPT_CLASS.data))
             generated_image_path = os.path.join("data", FOLDER, f"generated_image.jpg")
@@ -169,7 +170,7 @@ async def analyze_voice_and_return_response_and_audio(file: UploadFile = File(..
         elif GPT_CLASS.kids_age == "1" and GPT_CLASS.question_index >= 6:
             # 질문 그만하도록 prompt 변경
             print("질문 그만하도록 prompt 변경")
-            audio_text_add = "[sytem message: 지금까지 한 대화를 통해 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 부모님이 이 질문은 잘 답할거야!]"
+            audio_text_add = "[sytem message: 지금까지 한 대화를 활용해 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 부모님이 이 질문은 잘 답할거야!]"
             audio_text_added = audio_text + audio_text_add
             GPT_CLASS.add_message("user", audio_text_added, update_log=False)
             response_data_dict = {"role": "user", "content": audio_text}
@@ -177,7 +178,7 @@ async def analyze_voice_and_return_response_and_audio(file: UploadFile = File(..
         elif GPT_CLASS.kids_age == "0" and GPT_CLASS.question_index >= 4:
             # 질문 그만하도록 prompt 변경
             print("질문 그만하도록 prompt 변경")
-            audio_text_add = "[sytem message: 지금까지 한 대화를 통해 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 부모님이 이 질문은 잘 답할거야!]"
+            audio_text_add = "[sytem message: 지금까지 한 대화를 활용해 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 부모님이 이 질문은 잘 답할거야!]"
             audio_text_added = audio_text + audio_text_add
             GPT_CLASS.add_message("user", audio_text_added, update_log=False)
             response_data_dict = {"role": "user", "content": audio_text}

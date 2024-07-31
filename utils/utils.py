@@ -126,14 +126,14 @@ def plot_top_big_tags_kids_theme(data):
         # Create the bar plot with a kids' theme
         plt.figure(figsize=(12, 8))
         bars = plt.bar(tags, counts, color=['#FFB6C1', '#FFD700', '#87CEEB', '#98FB98'], edgecolor='black')
-        plt.xlabel('오늘 하루 우리 아이의 관심 태그', fontsize=24)
-        plt.ylabel('개수', fontsize=20)
+        plt.xlabel('오늘 하루 우리 아이의 관심 태그', fontsize=24, fontweight='bold')
+        plt.ylabel('개수', fontsize=20, fontweight='bold')
         plt.title('상위 4개 태그', fontsize=24, fontweight='bold')
         
         # Add some decoration
         for bar in bars:
             yval = bar.get_height()
-            plt.text(bar.get_x() + bar.get_width()/2, yval + 0.1, int(yval), ha='center', va='bottom', fontsize=20)
+            plt.text(bar.get_x() + bar.get_width()/2, yval + 0.1, int(yval), ha='center', va='bottom', fontsize=20, fontweight='bold')
         
         plt.grid(axis='y', linestyle='--', alpha=0.7)
         plt.savefig('./plot.png')
