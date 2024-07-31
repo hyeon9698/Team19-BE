@@ -13,8 +13,11 @@ from utils.chatgpt_class import ChatGPTClass
 from utils.utils import check_folder, get_directory_structure
 import shutil
 from utils.gpt_image_generateion import generate_image
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
+
+app.mount("/data", StaticFiles(directory="data"), name="data")
 
 origins = [
     "http://localhost",
@@ -87,8 +90,8 @@ async def analyze_image_and_return_response_and_audio(file: UploadFile = File(..
         GPT_CLASS = ChatGPTClass(folder=FOLDER)
         os.makedirs(os.path.join("data", FOLDER), exist_ok=True)
         image = Image.open(file.file)
-        image.save(os.path.join("data", FOLDER, file.filename))
-        GPT_CLASS.filename = file.filename.split(".")[0]
+        image.save(os.path.join("data", FOLDER, "image_file.jpg"))
+        GPT_CLASS.filename = "image_file.jpg".split(".")[0]
         GPT_CLASS.init_messages()
         GPT_CLASS.add_message_with_image(image)
         response_data = GPT_CLASS.get_response()
@@ -119,7 +122,7 @@ async def get_generated_image_data():
     try:
         print("이미지 생성중 ...")
         generated_image = generate_image(str(GPT_CLASS.data))
-        generated_image_path = os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_generated_image.jpg")
+        generated_image_path = os.path.join("data", FOLDER, f"generated_image.jpg")
         generated_image.save(generated_image_path)
         return FileResponse(generated_image_path, media_type="image/jpeg")
     except Exception as e:
@@ -134,7 +137,16 @@ async def analyze_voice_and_return_response_and_audio(file: UploadFile = File(..
             shutil.copyfileobj(file.file, buffer)
         audio_text = stt_function(audio_file_path)['text']
         print("audio_text", audio_text)
-        GPT_CLASS.add_message("user", audio_text)
+        if GPT_CLASS.question_index >= 6:
+            # 질문 그만하도록 prompt 변경
+            print("질문 그만하도록 prompt 변경")
+            audio_text_add = "[sytem message: 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 이제 부모님께 질문을 해볼까요?]"
+            audio_text_added = audio_text + audio_text_add
+            GPT_CLASS.add_message("user", audio_text_added, update_log=False)
+            response_data_dict = {"role": "user", "content": audio_text}
+            GPT_CLASS.update_log(message=response_data_dict)
+        else:
+            GPT_CLASS.add_message("user", audio_text)
         response_data = GPT_CLASS.get_response()
         print("AI 대답:", response_data)
         return {"status": "success", "user_input_data": audio_text, "response_data": response_data, "question_index": GPT_CLASS.question_index}
@@ -159,8 +171,37 @@ async def finish_messages():
     try:
         GPT_CLASS.add_message("user", "지금까지 한 대화를 한 문장으로 요약해서 알려줘. 질문은 안해도 돼. 아이와 대화하는 듯한 문장으로 만들어줘, 예를 들어서 사자 내용이 들어가 있다면: '무시무시한 사자가 나타났다!'", update_log=False)
         response_data = GPT_CLASS.get_response(update_log=False)
-        response_data_dict = {"role": "summary", "content": response_data}
+        response_data_dict = {"role": "short_summary", "content": response_data}
         GPT_CLASS.update_log(message=response_data_dict)
+        GPT_CLASS.add_message("user", "지금까지 한 대화를 요약해서 알려줘. 재미있게 요약해서 알려줘 아이는 어떤 대화를 했는지 알려줘", update_log=False)
+        response_data = GPT_CLASS.get_response(update_log=False)
+        response_data_dict = {"role": "long_summary", "content": response_data}
+        GPT_CLASS.update_log(message=response_data_dict)
+        GPT_CLASS.add_message("user", "지금까지 AI와 아이가 주고 받은 대화를 바탕으로, 부모가 아이에게 할 수 있는 질문 1가지를 알려줘. 1번 질문은 쉽게 주고 받을 수 있는 질문으로 만들어줘", update_log=False)
+        response_data = GPT_CLASS.get_response(update_log=False)
+        response_data_dict_1 = {"role": "recommend_quetions_1", "content": response_data}
+        GPT_CLASS.add_message("user", "지금까지 AI와 아이가 주고 받은 대화를 바탕으로, 부모가 아이에게 할 수 있는 질문 1가지를 알려줘. 질문은 행동에 관한 질문이면 좋겠어. (음식 이야기를 했다면: 같이 음식을 만들어 볼까요?)", update_log=False)
+        response_data = GPT_CLASS.get_response(update_log=False)
+        response_data_dict_2 = {"role": "recommend_quetions_2", "content": response_data}
+        GPT_CLASS.update_log(message=response_data_dict_1)
+        GPT_CLASS.update_log(message=response_data_dict_2)
+
+        # 동물 음식 장소 물건 캐릭터 놀이 탈것 자연 스포츠 모험
+        big_tag_list = ["동물", "음식", "장소", "물건", "캐릭터", "놀이", "탈것", "자연", "스포츠", "모험"]
+        GPT_CLASS.add_message("user", f"지금까지 AI와 아이가 주고 받은 대화를 바탕으로, 아이가 좋아할 만한 태그를 선택해줘. 최소 3개 최대 5개 해줘. 아래 중에서 선택해줘: {', '.join(big_tag_list)}. 출력 결과값에 해당 단어가 있으면 태그로 표현할거야.", update_log=False)
+        response_data = GPT_CLASS.get_response(update_log=False)
+        # response_data 안에 big_tag_list에 있는 단어가 있으면 태그로 표현
+        big_tag_list_2 = []
+        for tag in big_tag_list:
+            if tag in response_data:
+                big_tag_list_2.append(tag)
+        response_data_dict_3 = {"role": "big_tag", "content": ', '.join(big_tag_list_2)}
+        GPT_CLASS.update_log(message=response_data_dict_3)
+        GPT_CLASS.add_message("user", f"지금까지 AI와 아이가 주고 받은 대화를 바탕으로, 아이가 키워드 태그를 선택해줘. 최대 5개 선택해줘. 답만 보여주고 태그는 콤마(,)로 구분할거야.", update_log=False)
+        response_data = GPT_CLASS.get_response(update_log=False)
+        small_tag_list = response_data.split(", ")
+        response_data_dict_4 = {"role": "small_tag", "content": response_data}
+        GPT_CLASS.update_log(message=response_data_dict_4)
         return {"status": "success"}
     except Exception as e:
         print(traceback.format_exc())

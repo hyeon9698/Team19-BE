@@ -15,24 +15,44 @@ def check_folder():
         return "data_00"
     return None
 
+
 def prepare_conversation_data(log_content):
     lines = log_content.strip().split("\n")
     conversation = []
-    summaries = []
+    short_summary = ""
+    long_summary = ""
+    recommend_quetions_1 = ""
+    recommend_quetions_2 = ""
+    big_tag_list = []
+    small_tag_list = []
 
     for line in lines:
-        order_str, content = line.split(": ", 1)
-        order = int(order_str.split("_")[0])
-        role = order_str.split("_")[1]
-
-        if role == "summary":
-            summaries.append({"order": order, "summary": content})
+        if "short_summary" in line:
+            short_summary = line.split(": ", 1)[1]
+        elif "long_summary" in line:
+            long_summary = line.split(": ", 1)[1]
+        elif "recommend_quetions_1" in line:
+            recommend_quetions_1 = line.split(": ", 1)[1]
+        elif "recommend_quetions_2" in line:
+            recommend_quetions_2 = line.split(": ", 1)[1]
+        elif "big_tag" in line:
+            big_tag_list = line.split(": ", 1)[1].split(", ")
+        elif "small_tag" in line:
+            small_tag_list = line.split(": ", 1)[1].split(", ")
         else:
+            order_role, content = line.split(": ", 1)
+            order_str, role = order_role.split("_", 1)
+            order = int(order_str)
             conversation.append({"order": order, "role": role, "content": content})
 
     data = {
-        "conversation": conversation,
-        "summaries": summaries
+        # "conversation": conversation,
+        "short_summary": short_summary,
+        "long_summary": long_summary,
+        "recommend_quetions_1": recommend_quetions_1,
+        "recommend_quetions_2": recommend_quetions_2,
+        "big_tag": big_tag_list,
+        "small_tag": small_tag_list,
     }
 
     return data
@@ -44,19 +64,18 @@ def get_directory_structure(rootdir):
     """
     dir_structure = {}
 
-    for dirpath, dirnames, filenames in os.walk(rootdir):
-        if 'log.txt' in filenames:
-            with open(os.path.join(dirpath, 'log.txt'), 'r', encoding='utf-8') as file:
-                log_content = file.read()
-                relative_path = os.path.relpath(dirpath, rootdir)
-                folders = relative_path.split(os.sep)
+    def process_directory(directory, structure):
+        for entry in os.listdir(directory):
+            entry_path = os.path.join(directory, entry)
+            if os.path.isdir(entry_path):
+                structure[entry] = {}
+                process_directory(entry_path, structure[entry])
+            elif entry == 'log.txt':
+                with open(entry_path, 'r', encoding='utf-8') as file:
+                    log_content = file.read()
+                    log_data = prepare_conversation_data(log_content)
+                    structure.update(log_data)
 
-                subdir = dir_structure
-                for folder in folders:
-                    if folder not in subdir:
-                        subdir[folder] = {}
-                    subdir = subdir[folder]
-
-                subdir['log.txt'] = prepare_conversation_data(log_content)
+    process_directory(rootdir, dir_structure)
 
     return dir_structure
