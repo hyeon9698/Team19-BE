@@ -134,11 +134,18 @@ async def get_audio_data():
 @app.get("/get_generated_image_data")
 async def get_generated_image_data():
     try:
-        print("이미지 생성중 ...")
-        generated_image = generate_image(str(GPT_CLASS.data))
-        generated_image_path = os.path.join("data", FOLDER, f"generated_image.jpg")
-        generated_image.save(generated_image_path)
-        return FileResponse(generated_image_path, media_type="image/jpeg")
+        print("GPT_CLASS.question_index", GPT_CLASS.question_index)
+        if GPT_CLASS.question_index >= 2:
+            print("이미지 생성중 ...")
+            # generated_image = generate_image(str(GPT_CLASS.data))
+            # generated_image_path = os.path.join("data", FOLDER, f"generated_image.jpg")
+            # generated_image.save(generated_image_path)
+            # return FileResponse(generated_image_path, media_type="image/jpeg")
+            # return {"status": "success", "generated_image_path": generated_image_path}
+            return JSONResponse({"status": "success", "generated_image_path": "/data/data_06/generated_image.jpg"})
+        else:
+            print("이미지 생성 안함")
+            return JSONResponse({"status": "success", "generated_image_path": None})
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
@@ -154,7 +161,7 @@ async def analyze_voice_and_return_response_and_audio(file: UploadFile = File(..
         if GPT_CLASS.kids_age == "2" and GPT_CLASS.question_index >= 6:
             # 질문 그만하도록 prompt 변경
             print("질문 그만하도록 prompt 변경")
-            audio_text_add = "[sytem message: 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 이제 부모님이 이 질문은 잘 답할거야!]"
+            audio_text_add = "[sytem message: 지금까지 한 대화를 활용해 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 부모님이 이 질문은 잘 답할거야!]"
             audio_text_added = audio_text + audio_text_add
             GPT_CLASS.add_message("user", audio_text_added, update_log=False)
             response_data_dict = {"role": "user", "content": audio_text}
@@ -162,7 +169,7 @@ async def analyze_voice_and_return_response_and_audio(file: UploadFile = File(..
         elif GPT_CLASS.kids_age == "1" and GPT_CLASS.question_index >= 6:
             # 질문 그만하도록 prompt 변경
             print("질문 그만하도록 prompt 변경")
-            audio_text_add = "[sytem message: 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 이제 부모님이 이 질문은 잘 답할거야!]"
+            audio_text_add = "[sytem message: 지금까지 한 대화를 통해 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 부모님이 이 질문은 잘 답할거야!]"
             audio_text_added = audio_text + audio_text_add
             GPT_CLASS.add_message("user", audio_text_added, update_log=False)
             response_data_dict = {"role": "user", "content": audio_text}
@@ -170,7 +177,7 @@ async def analyze_voice_and_return_response_and_audio(file: UploadFile = File(..
         elif GPT_CLASS.kids_age == "0" and GPT_CLASS.question_index >= 4:
             # 질문 그만하도록 prompt 변경
             print("질문 그만하도록 prompt 변경")
-            audio_text_add = "[sytem message: 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 이제 부모님이 이 질문은 잘 답할거야!]"
+            audio_text_add = "[sytem message: 지금까지 한 대화를 통해 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 부모님이 이 질문은 잘 답할거야!]"
             audio_text_added = audio_text + audio_text_add
             GPT_CLASS.add_message("user", audio_text_added, update_log=False)
             response_data_dict = {"role": "user", "content": audio_text}
@@ -234,7 +241,7 @@ async def finish_messages():
         GPT_CLASS.update_log(message=response_data_dict_4)
         response_data_dict_5 = {"role": "date", "content": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         GPT_CLASS.update_log(message=response_data_dict_5)
-        telegram_send_message(f"모야Q에서 오늘의 질문이 도착!\nQ. {response_data_question_2}")
+        telegram_send_message(f"😀모야Q에서 오늘의 질문 도착!\nQ. {response_data_question_2}")
         try:
             data = await get_all_data()
             data = json.loads(data.body.decode())
