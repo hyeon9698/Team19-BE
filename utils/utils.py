@@ -2,10 +2,11 @@ from playsound import playsound
 import os
 import telegram # pip install python-telegram-bot==13.13
 import matplotlib.pyplot as plt
+from matplotlib.patches import FancyBboxPatch
 from collections import Counter
 plt.rcParams['font.family'] ='Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
-plt.rcParams['font.size'] = 20
+plt.rcParams['font.size'] = 38
 
 def play_sound(audio_file_path):
     playsound(audio_file_path)
@@ -13,7 +14,8 @@ def play_sound(audio_file_path):
 
 def check_folder():
     if os.path.exists("data"):
-        folders = os.listdir("data")
+        # get only folder not files
+        folders = [f for f in os.listdir("data") if os.path.isdir(os.path.join("data", f))]
         if folders:
             folders.sort()
             last_folder_number = int(folders[-1].split("_")[-1])
@@ -109,8 +111,14 @@ def telegram_send_image(image_path):
     except:
         pass
 
-def plot_top_big_tags_kids_theme(data):
+def plot_big_tag(data):
     try:
+        # data = {
+        #     'item1': {'big_tag': ['요리', '과학']},
+        #     'item2': {'big_tag': ['공룡', '기타']},
+        #     'item3': {'big_tag': ['요리', '과학', '요리']},
+        #     # Add more items as needed
+        # }
         # Extract all big tags from the data
         all_big_tags = [tag for entry in data.values() for tag in entry["big_tag"]]
         
@@ -123,20 +131,32 @@ def plot_top_big_tags_kids_theme(data):
         # Separate the tags and their counts for plotting
         tags, counts = zip(*top_tags)
         
+        # Set font to Pretendard
+        # rcParams['font.family'] = 'Pretendard'
+        
         # Create the bar plot with a kids' theme
-        plt.figure(figsize=(12, 8))
-        bars = plt.bar(tags, counts, color=['#FFB6C1', '#FFD700', '#87CEEB', '#98FB98'], edgecolor='black')
-        plt.xlabel('오늘 하루 우리 아이의 관심 태그', fontsize=24, fontweight='bold')
-        plt.ylabel('개수', fontsize=20, fontweight='bold')
-        plt.title('상위 4개 태그', fontsize=24, fontweight='bold')
+        plt.figure(figsize=(10, 8))
+        bars = plt.bar(tags, counts, color=['#7B61FF', '#B6A5FF', '#D3CFFF', '#E0D7FF'])
+        # plt.xlabel('오늘 하루 우리 아이의 관심 태그', fontsize=24, fontweight='bold')
+        # plt.ylabel('개수', fontsize=20, fontweight='bold')
+        # plt.title('아이의 관심 태그', fontsize=24, fontweight='bold')
         
         # Add some decoration
         for bar in bars:
             yval = bar.get_height()
-            plt.text(bar.get_x() + bar.get_width()/2, yval + 0.1, int(yval), ha='center', va='bottom', fontsize=20, fontweight='bold')
-        
-        plt.grid(axis='y', linestyle='--', alpha=0.7)
-        plt.savefig('./plot.png')
+            plt.text(bar.get_x() + bar.get_width()/2, yval + 0.1, int(yval), ha='center', va='bottom', fontsize=38, fontweight='bold')
+        for spine in plt.gca().spines.values():
+            spine.set_visible(False)
+        plt.yticks([])
+        plt.xticks(fontsize=38, fontweight='bold')
+        plt.grid(False)
+        plt.gca().tick_params(axis='x', pad=15)
+        # plt.grid(axis='y', linestyle='--', alpha=0.7)
+        plt.tight_layout()
+        plt.savefig('./data/plot.png')
         # plt.show()
     except:
         pass
+
+if __name__ == "__main__":
+    plot_big_tag("data")

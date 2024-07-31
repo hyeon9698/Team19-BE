@@ -10,13 +10,13 @@ import traceback
 from utils.clova_stt import stt_function
 from utils.clova_tts import generate_tts
 from utils.chatgpt_class import ChatGPTClass
-from utils.utils import check_folder, get_directory_structure, telegram_send_message, plot_top_big_tags_kids_theme, telegram_send_image
+from utils.utils import check_folder, get_directory_structure, telegram_send_message, plot_big_tag, telegram_send_image
 import shutil
 from utils.gpt_image_generateion import generate_image
 from fastapi.staticfiles import StaticFiles
 import datetime
 import json
-
+from collections import Counter
 
 app = FastAPI()
 
@@ -246,8 +246,8 @@ async def finish_messages():
         try:
             data = await get_all_data()
             data = json.loads(data.body.decode())
-            plot_top_big_tags_kids_theme(data)
-            telegram_send_image("./plot.png")
+            plot_big_tag(data)
+            telegram_send_image("./data/plot.png")
         except:
             pass
         return {"status": "success"}
@@ -255,6 +255,43 @@ async def finish_messages():
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error removing last message: {str(e)}")
 
+@app.get("/my_data")
+async def my_data():
+    try:
+        data = await get_all_data()
+        data = json.loads(data.body.decode())
+        # breakpoint()
+        # all_big_tags = [tag for entry in data.values() for tag in entry["big_tag"]]
+        all_big_tags = []
+        for entry in data.values():
+            if "big_tag" in entry:
+                for tag in entry["big_tag"]:
+                    all_big_tags.append(tag)
+        # Count the occurrences of each big tag
+        tag_counts = Counter(all_big_tags)
+        # breakpoint()
+        # Get the top 4 most common big tags
+        top_tag = tag_counts.most_common(4)
+        return_big_tag, count = zip(*top_tag)
+        # all_small_tags = [tag for entry in data.values() for tag in entry["small_tag"]]
+        all_small_tags = []
+        for entry in data.values():
+            if "small_tag" in entry:
+                for tag in entry["small_tag"]:
+                    all_small_tags.append(tag)
+        # get one data.keys() that has the most common big tag
+        recommend_question = "질문이 없어요!"
+        for key, value in data.items():
+            # breakpoint()
+            if "big_tag" in value:
+                if return_big_tag[0] in value["big_tag"]:
+                    recommend_question = value["recommend_questions_1"]
+        if len(all_small_tags) > 8:
+            all_small_tags = all_small_tags[:8]
+        return {"status": "success", "plot_data_path": "/data/plot.png", "tag": return_big_tag, "count": count, "all_small_tags": all_small_tags, "recommend_question": recommend_question}
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error getting my data: {str(e)}")
 
 @app.get("/get_all_data")
 async def get_all_data():
