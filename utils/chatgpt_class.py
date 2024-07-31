@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class ChatGPTClass:
-    def __init__(self, folder="data_00"):
+    def __init__(self, folder="data_00", kids_age="2"):
         self.api_key = os.getenv("OPENAI_API_KEY")
         self.url = "https://api.openai.com/v1/chat/completions"
         self.headers = {
@@ -20,6 +20,7 @@ class ChatGPTClass:
         self.filename = ""
         self.question_index = -1
         self.response_data_history = ""
+        self.kids_age = kids_age # 0: 만 2~4세, 1: 4~7세 이하, 2: 7세 이상
         # self.data = []
         # self.add_message("system", "당신은 사진을 보고 설명을 해주는 AI 입니다. 당신은 아이의 호기심을 해결해주는 친절한 부모입니다. 아이와 대화할 때는 아이의 궁금증을 해결해주고, 꼬리질문을 던지며 흥미를 지속시킵니다. 예시를 통해 설명하며, 답변은 짧고 명확하게 제공합니다. 대화는 항상 존대말로 해야합니다. 대화는 항상 질문으로 끝나야 합니다.")
         # self.question_index = 2 # 0: 아이가 처음 물어본 것, 1: 첫 사진을 보고 AI가 대답한 것, 2부터는 추가 질문에 대한 답변
@@ -69,8 +70,15 @@ class ChatGPTClass:
 
     def init_messages(self):
         self.data = []
-        self.add_message("system", "당신은 사진을 보고 설명을 해주는 AI 입니다. 당신은 아이의 호기심을 해결해주는 친절한 부모입니다. 아이와 대화할 때는 아이의 궁금증을 해결해주고, 꼬리질문을 던지며 흥미를 지속시킵니다. '짧고!' 명확하게 제공합니다. 아이가 지루해질 수 있기 때문에 1줄이 넘어가면 안됩니다. 반말로 이야기를 진행해주세요. 대화는 항상 질문으로 끝나야 합니다.")
-        # self.question_index = 1 # 0: 아이가 처음 물어본 것, 1: 첫 사진을 보고 AI가 대답한 것, 2부터는 추가 질문에 대한 답변
+        if self.kids_age == "0":
+            # 2~4세 굉장히 쉽게 설명해주세요
+            self.add_message("system", "당신은 사진을 보고 설명을 해주는 AI 입니다. 당신은 아이의 호기심을 해결해주는 친절한 부모입니다. 2살에서 3살 애기를 위한 대화를 해주세요. 굉장히 짧게 몇 단어로만 표현을 해주세요. 반말로 이야기를 진행해주세요. 대화는 항상 질문으로 끝나야 합니다.")
+        elif self.kids_age == "1":
+            # 4~7세 이하 쉽게 설명해주세요
+            self.add_message("system", "당신은 사진을 보고 설명을 해주는 AI 입니다. 당신은 아이의 호기심을 해결해주는 친절한 부모입니다. 4살에서 7살 애기를 위한 대화를 해주세요. 흥미를 지속시켜 주세요. 아이가 지루해질 수 있기 때문에 1줄이 넘어가면 안됩니다. 반말로 이야기를 진행해주세요. 대화는 항상 질문으로 끝나야 합니다.")
+        elif self.kids_age == "2":
+            # 7세 이상 쉽게 설명해주세요
+            self.add_message("system", "당신은 사진을 보고 설명을 해주는 AI 입니다. 당신은 아이의 호기심을 해결해주는 친절한 부모입니다. 아이와 대화할 때는 아이의 궁금증을 해결해주고, 꼬리질문을 던지며 흥미를 지속시킵니다. '짧고!' 명확하게 제공합니다. 아이가 지루해질 수 있기 때문에 1줄이 넘어가면 안됩니다. 반말로 이야기를 진행해주세요. 대화는 항상 질문으로 끝나야 합니다.")
 
     def update_log(self, message):
         self.question_index += 1

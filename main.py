@@ -14,6 +14,7 @@ from utils.utils import check_folder, get_directory_structure
 import shutil
 from utils.gpt_image_generateion import generate_image
 from fastapi.staticfiles import StaticFiles
+import datetime
 
 app = FastAPI()
 
@@ -81,17 +82,22 @@ async def test_audio(file: UploadFile = File(...)):
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
 
+@app.get("/init_model/{kidgs_age}")
+async def init_model(kids_age="0"):
+    global GPT_CLASS, FOLDER
+    FOLDER = check_folder()
+    GPT_CLASS = ChatGPTClass(folder=FOLDER, kids_age=kids_age)
+
 @app.post("/analyze_image_and_return_response_and_audio")
 async def analyze_image_and_return_response_and_audio(file: UploadFile = File(...)):
-    global GPT_CLASS, FOLDER
     try:
         print("사진 분석중 ...")
-        FOLDER = check_folder()
-        GPT_CLASS = ChatGPTClass(folder=FOLDER)
+        # FOLDER = check_folder()
+        # GPT_CLASS = ChatGPTClass(folder=FOLDER)
         os.makedirs(os.path.join("data", FOLDER), exist_ok=True)
         image = Image.open(file.file)
-        image.save(os.path.join("data", FOLDER, "image_file.jpg"))
-        GPT_CLASS.filename = "image_file.jpg".split(".")[0]
+        image.save(os.path.join("data", FOLDER, "test.jpg"))
+        GPT_CLASS.filename = "test.jpg".split(".")[0]
         GPT_CLASS.init_messages()
         GPT_CLASS.add_message_with_image(image)
         response_data = GPT_CLASS.get_response()
@@ -111,7 +117,12 @@ async def get_audio_data():
     try:
         print(GPT_CLASS.question_index+1)
         response_data = GPT_CLASS.response_data_history
-        output_mp3_path = generate_tts(response_data, file_name=os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_voice_{GPT_CLASS.question_index:02d}.mp3"))
+        if GPT_CLASS.kids_age == "2":
+            output_mp3_path = generate_tts(response_data, file_name=os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_voice_{GPT_CLASS.question_index:02d}.mp3"))
+        elif GPT_CLASS.kids_age == "1":
+            output_mp3_path = generate_tts(response_data, file_name=os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_voice_{GPT_CLASS.question_index:02d}.mp3"), speed=0)
+        elif GPT_CLASS.kids_age == "0":
+            output_mp3_path = generate_tts(response_data, file_name=os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_voice_{GPT_CLASS.question_index:02d}.mp3"), speed=1)
         return FileResponse(output_mp3_path, media_type="audio/mpeg")
     except Exception as e:
         print(traceback.format_exc())
@@ -137,10 +148,26 @@ async def analyze_voice_and_return_response_and_audio(file: UploadFile = File(..
             shutil.copyfileobj(file.file, buffer)
         audio_text = stt_function(audio_file_path)['text']
         print("audio_text", audio_text)
-        if GPT_CLASS.question_index >= 6:
+        if GPT_CLASS.kids_age == "2" and GPT_CLASS.question_index >= 6:
             # 질문 그만하도록 prompt 변경
             print("질문 그만하도록 prompt 변경")
-            audio_text_add = "[sytem message: 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 이제 부모님께 질문을 해볼까요?]"
+            audio_text_add = "[sytem message: 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 이제 부모님이 이 질문은 잘 답할거야!]"
+            audio_text_added = audio_text + audio_text_add
+            GPT_CLASS.add_message("user", audio_text_added, update_log=False)
+            response_data_dict = {"role": "user", "content": audio_text}
+            GPT_CLASS.update_log(message=response_data_dict)
+        elif GPT_CLASS.kids_age == "1" and GPT_CLASS.question_index >= 6:
+            # 질문 그만하도록 prompt 변경
+            print("질문 그만하도록 prompt 변경")
+            audio_text_add = "[sytem message: 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 이제 부모님이 이 질문은 잘 답할거야!]"
+            audio_text_added = audio_text + audio_text_add
+            GPT_CLASS.add_message("user", audio_text_added, update_log=False)
+            response_data_dict = {"role": "user", "content": audio_text}
+            GPT_CLASS.update_log(message=response_data_dict)
+        elif GPT_CLASS.kids_age == "0" and GPT_CLASS.question_index >= 4:
+            # 질문 그만하도록 prompt 변경
+            print("질문 그만하도록 prompt 변경")
+            audio_text_add = "[sytem message: 질문을 이제 그만할 수 있도록 넛지를 넣어주세요. 예를 들어서: 이제 부모님이 이 질문은 잘 답할거야!]"
             audio_text_added = audio_text + audio_text_add
             GPT_CLASS.add_message("user", audio_text_added, update_log=False)
             response_data_dict = {"role": "user", "content": audio_text}
@@ -169,20 +196,20 @@ async def voice_test_test(file: UploadFile = File(...)):
 @app.get("/finish_messages")
 async def finish_messages():
     try:
-        GPT_CLASS.add_message("user", "지금까지 한 대화를 한 문장으로 요약해서 알려줘. 질문은 안해도 돼. 아이와 대화하는 듯한 문장으로 만들어줘, 예를 들어서 사자 내용이 들어가 있다면: '무시무시한 사자가 나타났다!'", update_log=False)
+        GPT_CLASS.add_message("user", "지금까지 한 대화를 짧게 알려줘. 질문은 안해도 돼. ~가 뭐야? 형식으로 작성해줘. 예를 들어서 사자 내용이 들어가 있다면: 사자가 뭐야?, 자전거가 들어가 있다면: 자전거가 뭐야?", update_log=False)
         response_data = GPT_CLASS.get_response(update_log=False)
         response_data_dict = {"role": "short_summary", "content": response_data}
         GPT_CLASS.update_log(message=response_data_dict)
-        GPT_CLASS.add_message("user", "지금까지 한 대화를 요약해서 알려줘. 재미있게 요약해서 알려줘 아이는 어떤 대화를 했는지 알려줘", update_log=False)
+        GPT_CLASS.add_message("user", "지금까지 한 대화를 요약해서 알려줘. 재미있게 요약해서 알려줘. 아이와 어떤 대화를 나눴는지 알려줘", update_log=False)
         response_data = GPT_CLASS.get_response(update_log=False)
         response_data_dict = {"role": "long_summary", "content": response_data}
         GPT_CLASS.update_log(message=response_data_dict)
         GPT_CLASS.add_message("user", "지금까지 AI와 아이가 주고 받은 대화를 바탕으로, 부모가 아이에게 할 수 있는 질문 1가지를 알려줘. 1번 질문은 쉽게 주고 받을 수 있는 질문으로 만들어줘", update_log=False)
         response_data = GPT_CLASS.get_response(update_log=False)
-        response_data_dict_1 = {"role": "recommend_quetions_1", "content": response_data}
+        response_data_dict_1 = {"role": "recommend_questions_1", "content": response_data}
         GPT_CLASS.add_message("user", "지금까지 AI와 아이가 주고 받은 대화를 바탕으로, 부모가 아이에게 할 수 있는 질문 1가지를 알려줘. 질문은 행동에 관한 질문이면 좋겠어. (음식 이야기를 했다면: 같이 음식을 만들어 볼까요?)", update_log=False)
         response_data = GPT_CLASS.get_response(update_log=False)
-        response_data_dict_2 = {"role": "recommend_quetions_2", "content": response_data}
+        response_data_dict_2 = {"role": "recommend_questions_2", "content": response_data}
         GPT_CLASS.update_log(message=response_data_dict_1)
         GPT_CLASS.update_log(message=response_data_dict_2)
 
@@ -202,16 +229,37 @@ async def finish_messages():
         small_tag_list = response_data.split(", ")
         response_data_dict_4 = {"role": "small_tag", "content": response_data}
         GPT_CLASS.update_log(message=response_data_dict_4)
+        response_data_dict_5 = {"role": "date", "content": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+        GPT_CLASS.update_log(message=response_data_dict_5)
         return {"status": "success"}
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error removing last message: {str(e)}")
 
+
 @app.get("/get_all_data")
 async def get_all_data():
-    rootdir = './data'  # Set the root directory
-    data_structure = get_directory_structure(rootdir)
-    return JSONResponse(content=data_structure)
+    try:
+        rootdir = './data'  # Set the root directory
+        data_structure = get_directory_structure(rootdir)
+        return JSONResponse(content=data_structure)
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error getting all data: {str(e)}")
+
+@app.get("/get_one_data/{folder_name}")
+async def get_one_data(folder_name: str):
+    try:
+        print("folder_name", folder_name)
+        rootdir = './data'
+        data_structure = get_directory_structure(rootdir)
+        if folder_name in data_structure:
+            return JSONResponse(content=data_structure[folder_name])
+        else:
+            raise HTTPException(status_code=404, detail="Folder not found")
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error getting one data: {str(e)}")
 
 @app.get("/get_gpt_class_info")
 async def get_gpt_class_info():

@@ -21,24 +21,27 @@ def prepare_conversation_data(log_content):
     conversation = []
     short_summary = ""
     long_summary = ""
-    recommend_quetions_1 = ""
-    recommend_quetions_2 = ""
+    recommend_questions_1 = ""
+    recommend_questions_2 = ""
     big_tag_list = []
     small_tag_list = []
+    date = ""
 
     for line in lines:
         if "short_summary" in line:
             short_summary = line.split(": ", 1)[1]
         elif "long_summary" in line:
             long_summary = line.split(": ", 1)[1]
-        elif "recommend_quetions_1" in line:
-            recommend_quetions_1 = line.split(": ", 1)[1]
-        elif "recommend_quetions_2" in line:
-            recommend_quetions_2 = line.split(": ", 1)[1]
+        elif "recommend_questions_1" in line:
+            recommend_questions_1 = line.split(": ", 1)[1]
+        elif "recommend_questions_2" in line:
+            recommend_questions_2 = line.split(": ", 1)[1]
         elif "big_tag" in line:
             big_tag_list = line.split(": ", 1)[1].split(", ")
         elif "small_tag" in line:
             small_tag_list = line.split(": ", 1)[1].split(", ")
+        elif "date" in line:
+            date = line.split(": ", 1)[1]
         else:
             order_role, content = line.split(": ", 1)
             order_str, role = order_role.split("_", 1)
@@ -49,10 +52,11 @@ def prepare_conversation_data(log_content):
         # "conversation": conversation,
         "short_summary": short_summary,
         "long_summary": long_summary,
-        "recommend_quetions_1": recommend_quetions_1,
-        "recommend_quetions_2": recommend_quetions_2,
+        "recommend_questions_1": recommend_questions_1,
+        "recommend_questions_2": recommend_questions_2,
         "big_tag": big_tag_list,
         "small_tag": small_tag_list,
+        "date": date,
     }
 
     return data
