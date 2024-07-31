@@ -6,12 +6,13 @@ from pydantic import BaseModel
 import os
 from PIL import Image
 import traceback
-from utils.gpt_image_analyze import analyze_image
+# from utils.gpt_image_analyze import analyze_image
 from utils.clova_stt import stt_function
 from utils.clova_tts import generate_tts
 from utils.chatgpt_class import ChatGPTClass
-from utils.utils import check_folder
+from utils.utils import check_folder, get_directory_structure
 import shutil
+from utils.gpt_image_generateion import generate_image
 
 app = FastAPI()
 
@@ -19,12 +20,13 @@ origins = [
     "http://localhost",
     "http://localhost:3000",
     "http://localhost:8080",
+    "http://localhost:8000",
     "https://team19-fe.vercel.app",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=['*'],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -91,7 +93,7 @@ async def analyze_image_and_return_response_and_audio(file: UploadFile = File(..
         GPT_CLASS.add_message_with_image(image)
         response_data = GPT_CLASS.get_response()
         GPT_CLASS.remove_index_message(1)
-        GPT_CLASS.add_message("user", "아이가 좋아할 제목으로 사용할 만큼 짧게 작성해줘. 예를 들어서 사진에 사자가 들어가 있다면: '무시무시한 사자!'", update_log=False)
+        GPT_CLASS.add_message("user", "이전 대화를 참고해서, 아이가 좋아할 제목으로 사용할 만큼 짧게 작성해줘. 예를 들어서 사진에 사자가 들어가 있다면: 무시무시한 사자!", update_log=False)
         response_data_summary = GPT_CLASS.get_response(update_log=False)
         GPT_CLASS.remove_index_message(2)
         print("요약된 문장:", response_data_summary)
@@ -104,9 +106,22 @@ async def analyze_image_and_return_response_and_audio(file: UploadFile = File(..
 @app.get("/get_audio_data")
 async def get_audio_data():
     try:
+        print(GPT_CLASS.question_index+1)
         response_data = GPT_CLASS.response_data_history
         output_mp3_path = generate_tts(response_data, file_name=os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_voice_{GPT_CLASS.question_index:02d}.mp3"))
         return FileResponse(output_mp3_path, media_type="audio/mpeg")
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
+
+@app.get("/get_generated_image_data")
+async def get_generated_image_data():
+    try:
+        print("이미지 생성중 ...")
+        generated_image = generate_image(str(GPT_CLASS.data))
+        generated_image_path = os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_generated_image.jpg")
+        generated_image.save(generated_image_path)
+        return FileResponse(generated_image_path, media_type="image/jpeg")
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
@@ -121,7 +136,20 @@ async def analyze_voice_and_return_response_and_audio(file: UploadFile = File(..
         print("audio_text", audio_text)
         GPT_CLASS.add_message("user", audio_text)
         response_data = GPT_CLASS.get_response()
-        return {"status": "success", "response_data": response_data}
+        print("AI 대답:", response_data)
+        return {"status": "success", "user_input_data": audio_text, "response_data": response_data, "question_index": GPT_CLASS.question_index}
+    except Exception as e:
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
+
+@app.post("/voice_test_test")
+async def voice_test_test(file: UploadFile = File(...)):
+    try:
+        print("voice_test_test 들어옴")
+        audio_file_path = os.path.join("data", FOLDER, f"{GPT_CLASS.filename}_voice_{GPT_CLASS.question_index+1:02d}.mp3")
+        with open(audio_file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        return FileResponse(audio_file_path, media_type="audio/mpeg")
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
@@ -137,6 +165,12 @@ async def finish_messages():
     except Exception as e:
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error removing last message: {str(e)}")
+
+@app.get("/get_all_data")
+async def get_all_data():
+    rootdir = './data'  # Set the root directory
+    data_structure = get_directory_structure(rootdir)
+    return JSONResponse(content=data_structure)
 
 @app.get("/get_gpt_class_info")
 async def get_gpt_class_info():
