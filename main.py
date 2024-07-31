@@ -135,8 +135,7 @@ async def get_audio_data():
 async def get_generated_image_data():
     try:
         print("GPT_CLASS.question_index", GPT_CLASS.question_index)
-        # if GPT_CLASS.question_index == 5:
-        if GPT_CLASS.question_index == 11:
+        if GPT_CLASS.question_index == 5:
             print("이미지 생성중 ...")
             generated_image = generate_image(str(GPT_CLASS.data))
             generated_image_path = os.path.join("data", FOLDER, f"generated_image.jpg")
