@@ -11,7 +11,7 @@ from utils.clova_stt import stt_function
 from utils.clova_tts import generate_tts
 from utils.chatgpt_class import ChatGPTClass
 from utils.utils import check_folder, get_directory_structure, telegram_send_message, plot_big_tag, telegram_send_image
-from clova_summary import summary_function
+from utils.clova_summary import summary_function
 import shutil
 from utils.gpt_image_generateion import generate_image
 from fastapi.staticfiles import StaticFiles
