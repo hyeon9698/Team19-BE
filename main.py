@@ -11,7 +11,6 @@ from utils.clova_stt import stt_function
 from utils.clova_tts import generate_tts
 from utils.chatgpt_class import ChatGPTClass
 from utils.utils import check_folder, get_directory_structure, telegram_send_message, plot_big_tag, telegram_send_image
-from utils.clova_summary import summary_function
 import shutil
 from utils.gpt_image_generateion import generate_image
 from fastapi.staticfiles import StaticFiles
@@ -20,6 +19,8 @@ import json
 from collections import Counter
 
 app = FastAPI()
+
+os.makedirs("./data", exist_ok=True)
 
 app.mount("/data", StaticFiles(directory="data"), name="data")
 
@@ -208,7 +209,6 @@ async def voice_test_test(file: UploadFile = File(...)):
 @app.get("/finish_messages")
 async def finish_messages():
     try:
-        # summary_function(text) # 퀄리티 좋지 않음.
         GPT_CLASS.add_message("user", "지금까지 한 대화를 짧게 알려줘. 질문은 안해도 돼. ~가 뭐야? 형식으로 작성해줘. 예를 들어서 사자 내용이 들어가 있다면: 사자가 뭐야?, 자전거가 들어가 있다면: 자전거가 뭐야?", update_log=False)
         response_data = GPT_CLASS.get_response(update_log=False)
         response_data_dict = {"role": "short_summary", "content": response_data}
@@ -244,14 +244,14 @@ async def finish_messages():
         GPT_CLASS.update_log(message=response_data_dict_4)
         response_data_dict_5 = {"role": "date", "content": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
         GPT_CLASS.update_log(message=response_data_dict_5)
-        telegram_send_message(f"😀모야Q에서 아이와 함께 나눌 오늘의 질문 도착!\nQ. {response_data_question_2}")
-        try:
-            data = await get_all_data()
-            data = json.loads(data.body.decode())
-            plot_big_tag(data)
-            telegram_send_image("./data/plot.png")
-        except:
-            pass
+        # telegram_send_message(f"😀모야Q에서 아이와 함께 나눌 오늘의 질문 도착!\nQ. {response_data_question_2}")
+        # try:
+        #     data = await get_all_data()
+        #     data = json.loads(data.body.decode())
+        #     plot_big_tag(data)
+        #     telegram_send_image("./data/plot.png")
+        # except:
+        #     pass
         return {"status": "success"}
     except Exception as e:
         print(traceback.format_exc())
@@ -336,8 +336,9 @@ async def get_gpt_class_info():
         raise HTTPException(status_code=500, detail=f"Error getting gpt class info: {str(e)}")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", reload=True)
+    # uvicorn.run(app, host="127.0.0.1", reload=True)
+    uvicorn.run(app)
     # conda activate team19
     # lt -p 8080 -s test
     # ngrok http 8080
-    # uvicorn main:app --port 8080
+    # uvicorn main:app --host=0.0.0.0 --port=8080

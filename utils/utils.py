@@ -1,4 +1,3 @@
-from playsound import playsound
 import os
 import telegram # pip install python-telegram-bot==13.13
 import matplotlib.pyplot as plt
@@ -7,10 +6,6 @@ from collections import Counter
 plt.rcParams['font.family'] ='Malgun Gothic'
 plt.rcParams['axes.unicode_minus'] = False
 plt.rcParams['font.size'] = 38
-
-def play_sound(audio_file_path):
-    playsound(audio_file_path)
-    return
 
 def check_folder():
     if os.path.exists("data"):
